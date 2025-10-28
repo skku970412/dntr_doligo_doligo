@@ -1,17 +1,17 @@
-# A DeNoising FPN with Transformer R-CNN for Tiny Object Detection
+# 미소 객체 검출을 위한 DeNoising FPN 및 Transformer R-CNN
 
 ![method](./dnfpn_v2.pdf)
 
 
-A PyTorch implementation and pretrained models for DNTR (DeNoising Transformer R-CNN). We present DN-FPN, a plug-in that suppresses noise generated during the fusion of FPNs. In addition, we renalvate the standard R-CNN to consist of a transformer structure, namely Trans R-CNN.(base)
+이 저장소는 DNTR(DeNoising Transformer R-CNN)을 PyTorch로 구현하고, 학습된 가중치를 제공합니다. FPN 융합 과정에서 발생하는 노이즈를 줄이기 위해 DN-FPN 플러그인을 도입하고, 표준 R-CNN을 Transformer 기반 구조(Trans R-CNN)로 재구성했습니다.
 
-## News
+## 최신 소식
 [2024/7/1]: **DQ-DETR** has been accepted by ECCV 2024. 🔥🔥🔥
 
 [2024/5/3]: **DNTR** has been accepted by TGRS 2024. 🔥🔥🔥
 
 
-## Other Research Paper on Tiny Object Detection 
+## 관련 미소 객체 검출 연구
 <!-- A DeNoising FPN With Transformer R-CNN for Tiny Object Detection
 Hou-I Liu and Yu-Wen Tseng and Kai-Cheng Chang and Pin-Jyun Wang and Hong-Han Shuai, and Wen-Huang Cheng 
 IEEE Transactions on Geoscience and Remote Sensing
@@ -23,7 +23,7 @@ IEEE Transactions on Geoscience and Remote Sensing
 | **DQ-DETR**| ECCV 2024 | [Paper](https://arxiv.org/abs/2404.03507)  \| [code](https://github.com/hoiliu-0801/DQ-DETR) \| [中文解读](https://blog.csdn.net/csdn_xmj/article/details/142813757) | 
 
 
-## Installation and Get Started
+## 설치 및 시작하기
 
 <!-- Required environments:
 * Linux
@@ -34,52 +34,50 @@ IEEE Transactions on Geoscience and Remote Sensing
 * [MMCV](https://mmcv.readthedocs.io/en/latest/#installation)
 * [cocoapi-aitod](https://github.com/jwwangchn/cocoapi-aitod) -->
 
-Our model is based on [mmdet-aitod](https://github.com/Chasel-Tsui/mmdet-aitod) and [MMDetection](https://github.com/open-mmlab/mmdetection).
+본 프로젝트는 [mmdet-aitod](https://github.com/Chasel-Tsui/mmdet-aitod)와 [MMDetection](https://github.com/open-mmlab/mmdetection)을 기반으로 합니다.
 <!-- This implementation is based on [MMDetection 2.24.1](https://github.com/open-mmlab/mmdetection). Assume that your environment has satisfied the above requirements,  -->
 
-## Environment & Installation
+## 환경 구성 안내
 
-We maintain two Python virtual environments under `mmdet-dntr/`:
+`mmdet-dntr/` 디렉터리에는 다음과 같이 두 개의 Python 가상환경을 유지합니다.
 
-| Environment | Path | Purpose |
+| 환경 | 경로 | 용도 |
 | --- | --- | --- |
-| Runtime | `mmdet-dntr/.venv` | Training / inference (minimal dependencies) |
-| Test | `mmdet-dntr/testvenv` | Includes formatting/test utilities and MMTracking extras |
+| Runtime | `mmdet-dntr/.venv` | 학습·추론 등 기본 작업(최소 의존성) |
+| Test | `mmdet-dntr/testvenv` | 포맷터·테스트 도구·MMTracking 등 부가 의존성 포함 |
 
-Use the helper script to recreate them directly from the pinned requirement files:
+잠금 파일을 사용해 아래 스크립트로 손쉽게 생성할 수 있습니다.
 
 ```shell script
 git clone https://github.com/hoiliu-0801/DNTR.git
 cd DNTR/mmdet-dntr
-# Recreate both environments (use --runtime or --test for just one)
+# 두 환경을 모두 생성 (--runtime 또는 --test 로 개별 생성 가능)
 ./install.sh --all
 
-# Activate the runtime env when training/inference
+# 학습/추론 시 Runtime 환경 활성화
 source .venv/bin/activate
 ```
 
-Key notes:
+- `configs/_base_/datasets/*.py`의 데이터 경로는 `data/<dataset>/...` 형태로 변경했습니다. 예를 들어 `data/aitod/images/trainval/` 구조에 맞춰 데이터를 배치하세요.
+- 각 설정 파일의 `load_from`/`resume_from` 값은 `work_dirs/...`를 기준으로 하므로, 체크포인트를 `mmdet-dntr/work_dirs/` 아래에 두거나 실행 시 경로를 덮어쓰면 됩니다.
+- `tools/` 디렉터리의 유틸리티 스크립트는 더 이상 절대경로에 의존하지 않고, 리포지토리 기준 상대경로로 결과를 저장합니다.
 
-- `configs/_base_/datasets/*.py` now point to repository-relative paths such as `data/aitod/…` and `data/visdrone/…`. Place datasets under `mmdet-dntr/data/` with the expected sub-folder names (e.g. `data/aitod/images/trainval/`).
-- All `load_from`/`resume_from` entries in configs reference `work_dirs/...`. Drop checkpoints inside `mmdet-dntr/work_dirs/` or override them at runtime.
-- Utility scripts in `tools/` no longer assume `/mnt/...` paths; they emit results under `tools/` and operate relative to the repo root.
+## 사용 방법
 
-## Get Started
+Runtime 환경을 활성화한 뒤 단일 GPU에서 다음과 같이 실행할 수 있습니다.
 
-With the runtime environment active, single GPU examples:
-
-Training DNTR, for example :
+학습 예시:
 
 ```
 python tools/train.py configs/aitod-dntr/aitod_DNTR_mask.py
 ```
 
-Testing DNTR, for example :
+평가 예시:
 ```
 python tools/test.py configs/aitod-dntr/aitod_DNTR_mask.py
 ```
 
-To reproduce tooling workflows (visualisations, PSNR scripts, dataset conversions), activate `testvenv` instead:
+시각화, PSNR 계산, 데이터셋 변환 등 부가 스크립트를 실행하려면 `testvenv`를 활성화하세요.
 
 ```bash
 source testvenv/bin/activate
@@ -87,7 +85,7 @@ python tools/analysis_tools/analyze_psnr_aitod.py
 ```
 
 ## Performance
-Table 1. **Training Set:** AI-TOD trainval set, **Testing Set:** AI-TOD test set, 36 epochs, where FRCN, DR denotes Faster R-CNN and DetectoRS, respectively.
+표 1. **학습 데이터:** AI-TOD trainval, **평가 데이터:** AI-TOD test, 36 epoch (FRCN은 Faster R-CNN, DR은 DetectoRS).
 |Method | Backbone | mAP | AP<sub>50</sub> | AP<sub>75</sub> |AP<sub>vt</sub> | AP<sub>t</sub>  | AP<sub>s</sub>  | AP<sub>m</sub> |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---: |:---: |:---: |
 FRCN | R-50 | 11.1 | 26.3 | 7.6 | 0.0 | 7.2 | 23.3 | 33.6 | 
@@ -97,31 +95,30 @@ NWD-RKA | R-50 | 23.4 | 53.5 | 16.8 | 8.7 | 23.8 | 28.5 | 36.0 |
 DNTR | R-50 | 26.2 | **56.7** | 20.2 | 12.8 | 26.4 | 31.0 | 37.0 | 
 DNTR (New) | R-50 | **27.2** | 56.3 | **21.8** | **15.2** | **27.4** | **31.9** | **38.5** |
 
-Table 2.  **Training Set:** Visdrone train set, **Validation Set:** Visdrone val set, 12 epochs,
+표 2. **학습 데이터:** VisDrone train, **검증 데이터:** VisDrone val, 12 epoch 기준.
 |Method | Backbone |AP| AP<sub>50</sub> | AP<sub>75</sub> |
 |:---:|:---:|:---:|:---:|:---:|
 DNTR | R-50 | 34.4 | 57.9 | 35.3 |
 UFPMP w/o DN-FPN| R-50 | 36.6 | 62.4 | 36.7 |
 UFPMP w/ DN-FPN | R-50 | **37.8** | **62.7** | **38.6** |
 
-## AI-TOD-v1 and AI-TOD-v2 Datasets (Don’t forget to leave us a ⭐)
-* Step 1: Download the datasets from the below link.
+## AI-TOD-v1/v2 데이터셋 (⭐️ 부탁드려요!)
+* 1단계: 아래 링크에서 데이터셋을 내려받습니다.
 ```sh
 https://drive.google.com/drive/folders/1CowS5BrujefWQxxlmOFfUuLOfUUm8w6U?usp=sharing
 ```
 
 
-## Pretrained Weights of AI-TOD-v1 and AI-TOD-v2. 
+## AI-TOD-v1/v2 사전 학습 가중치
 https://drive.google.com/drive/folders/1i0mYPQ3Cz_k4iAIvSwecwpWMX_wivxzY
 
 
-## Note
-If you want to run other baseline method with DN-FPN, please replace /mmdet/models/detectors/two_stage_ori.py with mmdet/models/detectors/two_stage.py.
+## 참고
+다른 베이스라인 모델에 DN-FPN을 적용하려면 `mmdet/models/detectors/two_stage_ori.py`를 `mmdet/models/detectors/two_stage.py`로 교체하세요.
 
-For example: 
-Faster R-CNN: python tools/train.py configs/aitod-dntr/aitod_faster_r50_dntr_1x.py.
+예) Faster R-CNN: `python tools/train.py configs/aitod-dntr/aitod_faster_r50_dntr_1x.py`
 
-## Citation
+## 인용
 ```bibtex
 @ARTICLE{10518058,
   author={Liu, Hou-I and Tseng, Yu-Wen and Chang, Kai-Cheng and Wang, Pin-Jyun and Shuai, Hong-Han and Cheng, Wen-Huang},
