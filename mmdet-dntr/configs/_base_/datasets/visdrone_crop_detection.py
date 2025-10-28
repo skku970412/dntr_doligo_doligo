@@ -1,5 +1,5 @@
 dataset_type = 'VisdroneDataset'
-data_root = '/mnt/data0/Garmin/datasets/visdrone/'
+data_root = 'data/visdrone/'
 
 classes = ('pedestrian', 'people', 'bicycle', 'car', 'van',
              'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
@@ -122,4 +122,3 @@ data = dict(
     #     img_prefix=data_root + 'test/',
     #     pipeline=test_pipeline))
 # gmap_image='/mnt/data0/Garmin/datasets/ai-tod/train/image_blur/train_blur/'
-

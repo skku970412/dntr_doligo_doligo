@@ -1,6 +1,9 @@
 import os
-path_old= "/mnt/data0/Garmin/datasets/ai-tod/val/labels_old/"
-path_new= "/mnt/data0/Garmin/datasets/ai-tod/trainval/labels/train2024"
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+path_old= PROJECT_ROOT / "data" / "aitod" / "val" / "labels_old"
+path_new= PROJECT_ROOT / "data" / "aitod" / "trainval" / "labels" / "train2024"
 CLASSES = {'airplane':0, 'bridge':1, 'storage-tank':2, 'ship':3, 'swimming-pool':4, 'vehicle':5, 'person':6, 'wind-mill':7}
 file_= os.listdir(path_new)
 print(len(file_))

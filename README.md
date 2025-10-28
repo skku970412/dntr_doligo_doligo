@@ -37,16 +37,36 @@ IEEE Transactions on Geoscience and Remote Sensing
 Our model is based on [mmdet-aitod](https://github.com/Chasel-Tsui/mmdet-aitod) and [MMDetection](https://github.com/open-mmlab/mmdetection).
 <!-- This implementation is based on [MMDetection 2.24.1](https://github.com/open-mmlab/mmdetection). Assume that your environment has satisfied the above requirements,  -->
 
-Please follow the following steps for installation.
+## Environment & Installation
+
+We maintain two Python virtual environments under `mmdet-dntr/`:
+
+| Environment | Path | Purpose |
+| --- | --- | --- |
+| Runtime | `mmdet-dntr/.venv` | Training / inference (minimal dependencies) |
+| Test | `mmdet-dntr/testvenv` | Includes formatting/test utilities and MMTracking extras |
+
+Use the helper script to recreate them directly from the pinned requirement files:
 
 ```shell script
 git clone https://github.com/hoiliu-0801/DNTR.git
 cd DNTR/mmdet-dntr
-# Installation
-sh install.sh
+# Recreate both environments (use --runtime or --test for just one)
+./install.sh --all
+
+# Activate the runtime env when training/inference
+source .venv/bin/activate
 ```
 
-Get Started with single GPU
+Key notes:
+
+- `configs/_base_/datasets/*.py` now point to repository-relative paths such as `data/aitod/…` and `data/visdrone/…`. Place datasets under `mmdet-dntr/data/` with the expected sub-folder names (e.g. `data/aitod/images/trainval/`).
+- All `load_from`/`resume_from` entries in configs reference `work_dirs/...`. Drop checkpoints inside `mmdet-dntr/work_dirs/` or override them at runtime.
+- Utility scripts in `tools/` no longer assume `/mnt/...` paths; they emit results under `tools/` and operate relative to the repo root.
+
+## Get Started
+
+With the runtime environment active, single GPU examples:
 
 Training DNTR, for example :
 
@@ -57,6 +77,13 @@ python tools/train.py configs/aitod-dntr/aitod_DNTR_mask.py
 Testing DNTR, for example :
 ```
 python tools/test.py configs/aitod-dntr/aitod_DNTR_mask.py
+```
+
+To reproduce tooling workflows (visualisations, PSNR scripts, dataset conversions), activate `testvenv` instead:
+
+```bash
+source testvenv/bin/activate
+python tools/analysis_tools/analyze_psnr_aitod.py
 ```
 
 ## Performance

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from mmdet.apis import init_detector, inference_detector, show_result_pyplot
 
 import random
@@ -19,6 +21,10 @@ from ignite.contrib.metrics.regression import *
 from ignite.contrib.metrics import *
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TOOL_ROOT = PROJECT_ROOT / 'tools'
+PSNR_DIR = TOOL_ROOT / 'aitod_psnr_2'
+PSNR_DIR.mkdir(parents=True, exist_ok=True)
 
 import cv2 
 def draw_gt(img_path, gt_path):
@@ -176,8 +182,8 @@ def gau(gt_file_path, image_path):
     # cv2.imwrite(FLAGS.output+'/test_blur/'+i[:-4]+'.jpg', image_filter*255)
     # print(image_filter.shape)
     image_filter = image_filter * 255
-    cv2.imwrite('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr_2/g.png', image_filter)
-    img = cv2.imread('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr_2/g.png')
+    cv2.imwrite(str(PSNR_DIR / 'g.png'), image_filter)
+    img = cv2.imread(str(PSNR_DIR / 'g.png'))
     # print(img.shape)
     img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
     # cv2.imwrite('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/gau/'+image_path.split('/')[-1],img)
@@ -196,7 +202,7 @@ def main():
     intro_files = [
     # '/mnt/data0/Garmin/datasets/ai-tod/test/images/79__2400_0.png',
     # '/mnt/data0/Garmin/datasets/ai-tod/test/images/129__0_1800.png',
-    '/mnt/data0/Garmin/datasets/ai-tod/test/images/322__1200_1200.png',
+    str((PROJECT_ROOT / 'data' / 'aitod' / 'test' / 'images' / '322__1200_1200.png')),
     # '/mnt/data0/Garmin/datasets/ai-tod/test/images/1037__600_2416.png',
     ]
     # gt_files = ['/mnt/data0/Garmin/datasets/ai-tod/test/labels/79__2400_0.txt',
@@ -204,20 +210,20 @@ def main():
     # '/mnt/data0/Garmin/datasets/ai-tod/test/labels/322__1200_1200.txt',
     # '/mnt/data0/Garmin/datasets/ai-tod/test/labels/1037__600_2416.txt',
     # ]
-    config_file = '/mnt/data0/Garmin/DNTR/mmdet-dntr/configs/aitod-dntr/aitod_RS_baseline.py'
+    config_file = str(PROJECT_ROOT / 'configs' / 'aitod-dntr' / 'aitod_RS_baseline.py')
     # checkpoint_file = '/mnt/data0/Garmin/pinjyun/nwd/mmdet-nwdrka/work_dirs/visdrone_RS_cascade_t2t_crop_4x/latest.pth'
     # checkpoint_file = '/mnt/data0/Garmin/pinjyun/nwd/mmdet-nwdrka/work_dirs/visdrone_RS_cascade_t2t_nms100_4x/epoch_48.pth'
-    checkpoint_file_cl = '/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/CL_26.5.pth'
-    checkpoint_file_base = '/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/base_24.pth'
+    checkpoint_file_cl = str(PROJECT_ROOT / 'work_dirs' / 'pretrain' / 'CL_26.5.pth')
+    checkpoint_file_base = str(PROJECT_ROOT / 'work_dirs' / 'pretrain' / 'base_24.pth')
 
     # visdrone
     # image_folder = '/mnt/data0/Garmin/datasets/visdrone/VisDrone2019-DET-val/images/'
     # gt_folder = '/mnt/data0/Garmin/datasets/visdrone/VisDrone2019-DET-val/annotations/'
 
     # aitod
-    image_folder = '/mnt/data0/Garmin/datasets/ai-tod/test/images/'
+    image_folder = str(PROJECT_ROOT / 'data' / 'aitod' / 'test' / 'images')
     # '/mnt/data0/Garmin/datasets/ai-tod/val/images'
-    gt_folder = '/mnt/data0/Garmin/datasets/ai-tod/test/labels/'
+    gt_folder = str(PROJECT_ROOT / 'data' / 'aitod' / 'test' / 'labels')
 
     # uavdt
     # image_folder = '/mnt/data0/Garmin/datasets/uavdt/val/'
@@ -249,11 +255,11 @@ def main():
 
 
         demo (model_cl, (image_folder + img))
-        feature_model_cl = cv2.imread('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr_2/c1.png')
+        feature_model_cl = cv2.imread(str(PSNR_DIR / 'c1.png'))
         
             
         demo (model_base, (image_folder + img))
-        feature_model_base = cv2.imread('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr_2/c1.png')
+        feature_model_base = cv2.imread(str(PSNR_DIR / 'c1.png'))
         
 
         feature_gt = gau(g_name, image_folder+img)

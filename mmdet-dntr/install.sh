@@ -1,19 +1,86 @@
-conda create -n DNTR python=3.7 --y
-# Install pytorch
-conda install pytorch==1.7.0 torchvision==0.8.0 torchaudio==0.7.0 cudatoolkit=11.0 -c pytorch --y
-# Required packages
-pip install -r requirements/build.txt
-pip install yapf==0.40.0
-pip install numba
-pip install timm
-pip install torchprofile
-python setup.py develop
-# Install cocoapi
-pip install pycocotools
-# Install aitodcocoapi
-pip install cython==0.29.36
-pip install "git+https://github.com/jwwangchn/cocoapi-aitod.git#subdirectory=aitodpycocotools"
-#Install mmcv
-#pip install mmcv==2.0.0rc4 -f https://download.openmmlab.com/mmcv/dist/cu110/torch1.7/index.html
-pip install -U openmim
-mim install mmcv-full==1.6.0
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: ./install.sh [options]
+
+Options:
+  --runtime        Recreate only the runtime environment (.venv)
+  --test           Recreate only the test environment (testvenv)
+  --all            Recreate both environments (default)
+  --python PATH    Python interpreter to use (default: python3)
+  --force          Remove existing environments before recreating them
+  -h, --help       Show this message
+EOF
+}
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+TARGET="all"
+FORCE=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --runtime) TARGET="runtime" ;;
+    --test) TARGET="test" ;;
+    --all) TARGET="all" ;;
+    --python) shift; PYTHON_BIN="$1" ;;
+    --force) FORCE=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+  esac
+  shift
+done
+
+create_env() {
+  local name="$1"
+  local req_file="$2"
+  local env_path="$ROOT_DIR/$name"
+
+  if [[ -d "$env_path" ]]; then
+    if [[ "$FORCE" -ne 1 ]]; then
+      echo "[skip] $name exists. Use --force to recreate."
+      return
+    fi
+    echo "[info] Removing existing $name..."
+    rm -rf "$env_path"
+  fi
+
+  echo "[info] Creating $name using $PYTHON_BIN"
+  "$PYTHON_BIN" -m venv "$env_path"
+
+  # Activate in subshell to avoid leaking environment
+  (
+    set -euo pipefail
+    cd "$ROOT_DIR"
+    source "$env_path/bin/activate"
+    python -m pip install --upgrade pip
+    pip install --no-cache-dir -r "$req_file"
+    deactivate
+  )
+
+  echo "[done] $name ready."
+}
+
+case "$TARGET" in
+  runtime)
+    create_env ".venv" "requirements/runtime-lock.txt"
+    ;;
+  test)
+    create_env "testvenv" "requirements/test-lock.txt"
+    ;;
+  all)
+    create_env ".venv" "requirements/runtime-lock.txt"
+    create_env "testvenv" "requirements/test-lock.txt"
+    ;;
+  *)
+    echo "Internal error: unknown target '$TARGET'" >&2
+    exit 1
+    ;;
+esac
+
+echo
+echo "Environments created."
+echo "  Runtime: source $ROOT_DIR/.venv/bin/activate"
+echo "  Test   : source $ROOT_DIR/testvenv/bin/activate"

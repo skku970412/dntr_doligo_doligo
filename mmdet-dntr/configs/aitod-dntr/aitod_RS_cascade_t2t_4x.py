@@ -283,9 +283,9 @@ runner = dict(type='EpochBasedRunner', max_epochs=48)
 evaluation = dict(interval=12, metric='bbox')
 
 # load_from = None
-load_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/base_24.pth"
-# load_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/RS_cl_two_stage/e12_mAP251.pth"
+load_from = "work_dirs/pretrain/base_24.pth"
+# load_from = "work_dirs/RS_cl_two_stage/e12_mAP251.pth"
 
-# resume_from = '/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/aitodv2_detectors_r50_nwdrka_1x/latest.pth'
+# resume_from = 'work_dirs/aitodv2_detectors_r50_nwdrka_1x/latest.pth'
 resume_from = None
-# resume_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/RS_cl_two_stage/e12_mAP251.pth" 
+# resume_from = "work_dirs/RS_cl_two_stage/e12_mAP251.pth" 

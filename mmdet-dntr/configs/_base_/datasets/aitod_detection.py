@@ -1,7 +1,6 @@
 dataset_type = 'AITODDataset'
-data_root = '/home/hoiliu/Desktop/Datasets/aitod/'
+data_root = 'data/aitod/'
 find_unused_parameters = True
-# data_root = 'data/AI-TOD/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -66,4 +65,3 @@ data = dict(
 #         ann_file=data_root + 'annotations/small_test_v1_1.0.json',
 #         img_prefix=data_root + 'test/',
 #         pipeline=test_pipeline))
-

@@ -1,9 +1,13 @@
+from pathlib import Path
+
 import cv2
 import mmcv
 import numpy as np
-import os
 import torch
 import matplotlib.pyplot as plt
+
+TOOL_ROOT = Path(__file__).resolve().parent
+DEFAULT_VIS_DIR = TOOL_ROOT / 'vis'
 
 def featuremap_2_heatmap(feature_map):
     assert isinstance(feature_map, torch.Tensor)
@@ -23,10 +27,12 @@ def featuremap_2_heatmap(feature_map):
     heatmaps.append(heatmap)
     return heatmaps
 
-# def draw_feature_map(features, save_dir = '/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/test/',name = 'c'):
-def draw_feature_map(features, filename, save_dir = '/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/vis/'):
+# def draw_feature_map(features, save_dir = DEFAULT_VIS_DIR / 'aitod_psnr/test/',name = 'c'):
+def draw_feature_map(features, filename, save_dir=DEFAULT_VIS_DIR):
     h=800
     w=800
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
 
     if isinstance(features, torch.Tensor):
         for heat_maps in features:
@@ -43,7 +49,7 @@ def draw_feature_map(features, filename, save_dir = '/mnt/data0/Garmin/DNTR/mmde
                 # plt.show()
                 # file_=os.listdir("/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/test/test_coco_base")
                 # if filename in file_:
-                cv2.imwrite(save_dir + filename, superimposed_img)
+                cv2.imwrite(str(save_dir / filename), superimposed_img)
     else:
         for featuremap in features:
             heatmaps = featuremap_2_heatmap(featuremap)
@@ -65,7 +71,7 @@ def draw_feature_map(features, filename, save_dir = '/mnt/data0/Garmin/DNTR/mmde
                 # cv2.destroyAllWindows()
                 # file_=os.listdir("/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/test/test_coco_base")
                 # if filename in file_:
-                cv2.imwrite(save_dir+"img_" + filename, superimposed_img)
+                cv2.imwrite(str(save_dir / f"img_{filename}"), superimposed_img)
 
                     # cv2.imwrite(save_dir + filename+str(i) +'.png', superimposed_img)
                     # i=i+1

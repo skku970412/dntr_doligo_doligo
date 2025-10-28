@@ -283,10 +283,10 @@ runner = dict(type='EpochBasedRunner', max_epochs=13)
 evaluation = dict(interval=6, metric='bbox')
 
 load_from = None
-# load_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/base_24.pth"
-# load_from = "/mnt/data0/Garmin/pinjyun/nwd/mmdet-nwdrka/work_dirs/pretrain/detectors_cascade_rcnn_r50_1x_coco-32a10ba0.pth"
-# load_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/RS_cl_two_stage/e12_mAP251.pth"
+# load_from = "work_dirs/pretrain/base_24.pth"
+# load_from = "work_dirs/pretrain/detectors_cascade_rcnn_r50_1x_coco-32a10ba0.pth"
+# load_from = "work_dirs/RS_cl_two_stage/e12_mAP251.pth"
 
-# resume_from = '/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/aitodv2_detectors_r50_nwdrka_1x/latest.pth'
-resume_from = "/mnt/data0/Garmin/DNTR/mmdet-dntr/work_dirs/visdrone_RS_1000/epoch_12.pth"
-# resume_from = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/RS_cl_two_stage/e12_mAP251.pth"
+# resume_from = 'work_dirs/aitodv2_detectors_r50_nwdrka_1x/latest.pth'
+resume_from = "work_dirs/visdrone_RS_1000/epoch_12.pth"
+# resume_from = "work_dirs/RS_cl_two_stage/e12_mAP251.pth"

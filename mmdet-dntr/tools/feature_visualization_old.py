@@ -1,9 +1,13 @@
+from pathlib import Path
+
 import cv2
 import mmcv
 import numpy as np
-import os
 import torch
 import matplotlib.pyplot as plt
+
+TOOL_ROOT = Path(__file__).resolve().parent
+DEFAULT_SAVE_DIR = TOOL_ROOT / 'aitod_psnr_2'
 
 def featuremap_2_heatmap(feature_map):
     assert isinstance(feature_map, torch.Tensor)
@@ -22,8 +26,10 @@ def featuremap_2_heatmap(feature_map):
 
     return heatmaps
 
-def draw_feature_map(features,save_dir = '/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr_2/',name = 'c1'):
+def draw_feature_map(features, save_dir=DEFAULT_SAVE_DIR, name='c1'):
     i=0
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
     if isinstance(features,torch.Tensor):
         # print('there')
 
@@ -62,7 +68,7 @@ def draw_feature_map(features,save_dir = '/mnt/data0/Garmin/DNTR/mmdet-dntr/tool
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
                 if i==1:
-                    cv2.imwrite(save_dir + name +'.png', superimposed_img)
+                    cv2.imwrite(str(save_dir / f'{name}.png'), superimposed_img)
                     
                 # cv2.imwrite(save_dir + name+str(i) +'.png', superimposed_img)
                 i=i+1

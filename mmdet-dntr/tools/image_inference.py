@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from mmdet.apis import init_detector, inference_detector, show_result_pyplot
 import argparse
 import sys
@@ -20,11 +22,16 @@ from ignite.utils import *
 from ignite.contrib.metrics.regression import *
 from ignite.contrib.metrics import *
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_IMG = PROJECT_ROOT / 'data' / 'coco' / 'test2017' / '000000485208.jpg'
+DEFAULT_CONFIG = PROJECT_ROOT / 'configs' / 'aitod-dntr' / 'coco_RS_CL_base.py'
+DEFAULT_CKPT = PROJECT_ROOT / 'work_dirs' / 'coco_RS_CL_base' / 'epoch_24.pth'
+
 def parse_args():
     parser = argparse.ArgumentParser(description='in and out imgs')
-    parser.add_argument('--img_path', type=str, help = "image name", default="/mnt/data0/Garmin/datasets/coco/test2017/000000485208.jpg")
-    parser.add_argument('--config', type=str,default='/mnt/data0/Garmin/DNTR/mmdet-dntr/configs/aitod-dntr/coco_RS_CL_base.py')
-    parser.add_argument('--ckpt', type=str, default="/mnt/data0/Garmin/DNTR/mmdet-dntr/work_dirs/coco_RS_CL_base/epoch_24.pth")
+    parser.add_argument('--img_path', type=str, help = "image name", default=str(DEFAULT_IMG))
+    parser.add_argument('--config', type=str,default=str(DEFAULT_CONFIG))
+    parser.add_argument('--ckpt', type=str, default=str(DEFAULT_CKPT))
     parser.add_argument('--out', type=str, default="outputs/base")
 
     if len(sys.argv) <= 1:

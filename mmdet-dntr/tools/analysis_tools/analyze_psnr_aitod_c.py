@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from mmdet.apis import init_detector, inference_detector
 
 import random
@@ -18,6 +20,13 @@ from ignite.utils import *
 from ignite.contrib.metrics.regression import *
 from ignite.contrib.metrics import *
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TOOL_ROOT = PROJECT_ROOT / 'tools'
+PSNR_DIR = TOOL_ROOT / 'aitod_psnr'
+PSNR_DIR.mkdir(parents=True, exist_ok=True)
+GAU_DIR = PSNR_DIR / 'gau'
+GAU_DIR.mkdir(parents=True, exist_ok=True)
 
 
 import cv2 
@@ -91,9 +100,10 @@ def gkern(kernlen=21, std=3):
 def gau(gt_file_path, image_path):
 
 
-    img_name = image_path.split('/')[-1]
+    img_path = Path(image_path)
+    img_name = img_path.name
     anno_data = open(gt_file_path, 'r')
-    image = cv2.imread(image_path) #read image shape
+    image = cv2.imread(str(img_path)) #read image shape
 
     image_filter = np.zeros((800, 800), dtype=np.float64)
     # print(image_filter.shape)
@@ -170,8 +180,8 @@ def gau(gt_file_path, image_path):
     # cv2.imwrite(FLAGS.output+'/test_blur/'+i[:-4]+'.jpg', image_filter*255)
     # print(image_filter.shape)
     image_filter = image_filter * 255
-    cv2.imwrite('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/g.png', image_filter)
-    img = cv2.imread('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/g.png')
+    cv2.imwrite(str(PSNR_DIR / 'g.png'), image_filter)
+    img = cv2.imread(str(PSNR_DIR / 'g.png'))
     # print(img.shape)
     img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
     # print('/mnt/data0/Garmin/pinjyun/mmdetection/tools/psnr_exp/gau/'+image_path.split('/')[-1])
@@ -219,28 +229,26 @@ def main():
     # config_file = "/mnt/data0/Garmin/pinjyun/NWD/work_dirs/detectors_cascade_rcnn_r50_aitod_baseline/detectors_cascade_rcnn_r50_aitod_baseline.py"
     # checkpoint_file_base = "/mnt/data0/Garmin/pinjyun/NWD/work_dirs/detectors_cascade_rcnn_r50_aitod_baseline/epoch_12.pth"
 
-    config_file = "/mnt/data0/Garmin/DNTR/mmdet-dntr/configs/aitod-dntr/aitod_RS_baseline.py"
-    checkpoint_file_cl = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/CL_26.5.pth"
-    checkpoint_file_base = "/mnt/data0/Garmin/nwd-rka/mmdet-nwdrka/work_dirs/pretrain/base_24.pth"
+    config_file = str(PROJECT_ROOT / "configs" / "aitod-dntr" / "aitod_RS_baseline.py")
+    checkpoint_file_cl = str(PROJECT_ROOT / "work_dirs" / "pretrain" / "CL_26.5.pth")
+    checkpoint_file_base = str(PROJECT_ROOT / "work_dirs" / "pretrain" / "base_24.pth")
 
     # visdrone
     # image_folder = '/mnt/data0/Garmin/datasets/visdrone/VisDrone2019-DET-val/images/'
     # gt_folder = '/mnt/data0/Garmin/datasets/visdrone/VisDrone2019-DET-val/annotations/'
 
     # aitod
-    image_folder = '/mnt/data0/Garmin/datasets/ai-tod/test/images/'
-    gt_folder = '/mnt/data0/Garmin/datasets/ai-tod/test/labels/'
+    image_folder = PROJECT_ROOT / 'data' / 'aitod' / 'test' / 'images'
+    gt_folder = PROJECT_ROOT / 'data' / 'aitod' / 'test' / 'labels'
 
     # uavdt
     # image_folder = '/mnt/data0/Garmin/datasets/uavdt/val/'
     # gt_folder = '/mnt/data0/Garmin/datasets/uavdt/val_txt/'
 
-    imgs = os.listdir(image_folder)
-    gts = os.listdir(gt_folder)
+    imgs = sorted([p.name for p in image_folder.iterdir() if p.is_file()])
+    gts = sorted([p.name for p in gt_folder.iterdir() if p.is_file()])
 
     
-    imgs.sort()
-    gts.sort()
     image_num = len(imgs)
     gt_num = len(gts)
     print("total img:", image_num , "total gt:", gt_num)
@@ -257,10 +265,12 @@ def main():
     model_base = init_detector(config_file, checkpoint_file_base, device=device)
 
     for img in intro_files:
-        print('img:',image_folder + img)
-        print('gt:',gt_folder + img.replace("png","txt"))
-        feature_gt = gau(gt_folder + img.replace("png","txt"), image_folder+img)
-        cv2.imwrite('/mnt/data0/Garmin/DNTR/mmdet-dntr/tools/aitod_psnr/gau/'+(image_folder+img).split('/')[-1],feature_gt)
+        image_path = image_folder / img
+        gt_path = gt_folder / img.replace("png", "txt")
+        print('img:', image_path)
+        print('gt:', gt_path)
+        feature_gt = gau(str(gt_path), str(image_path))
+        cv2.imwrite(str(GAU_DIR / image_path.name), feature_gt)
 
     # for (img, gt) in zip(imgs, gts):
     #     print('img:',image_folder + img)

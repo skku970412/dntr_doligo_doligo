@@ -12,10 +12,15 @@ import json
 from tqdm import tqdm
 # from sklearn.model_selection import train_test_split
 import argparse
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATA_ROOT = PROJECT_ROOT / 'data' / 'aitod'
+DEFAULT_SAVE_PATH = DEFAULT_DATA_ROOT / 'annotations' / 'aitod_test_v2_new.json'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--root_dir', default='/mnt/data0/Garmin/datasets/ai-tod/test',type=str, help="root path of images and labels, include ./images and ./labels and classes.txt")
-parser.add_argument('--save_path', type=str,default='/mnt/data0/Garmin/datasets/ai-tod/annotations/aitod_test_v2_new.json', help="if not split the dataset, give a path to a json file")
+parser.add_argument('--root_dir', default=str(DEFAULT_DATA_ROOT / 'test'),type=str, help="root path of images and labels, include ./images and ./labels and classes.txt")
+parser.add_argument('--save_path', type=str,default=str(DEFAULT_SAVE_PATH), help="if not split the dataset, give a path to a json file")
 parser.add_argument('--random_split', action='store_true', help="random split the dataset, default ratio is 8:1:1")
 parser.add_argument('--split_by_file', action='store_true', help="define how to split the dataset, include ./train.txt ./val.txt ./test.txt ")
 
@@ -46,13 +51,13 @@ arg = parser.parse_args()
 
 
 def yolo2coco(arg):
-    root_path = arg.root_dir
-    print("Loading data from ",root_path)
+    root_path = Path(arg.root_dir)
+    print("Loading data from ", root_path)
 
-    assert os.path.exists(root_path)
-    originLabelsDir = os.path.join(root_path, 'labels','train2024')
-    originImagesDir = os.path.join(root_path, 'images','train2024')
-    with open(os.path.join(root_path, 'classes.txt')) as f:
+    assert root_path.exists()
+    originLabelsDir = root_path / 'labels' / 'train2024'
+    originImagesDir = root_path / 'images' / 'train2024'
+    with open(root_path / 'classes.txt') as f:
         classes = f.read().strip().split()
         print(classes)
     # images dir name
@@ -89,7 +94,7 @@ def yolo2coco(arg):
         txtFile = index.replace('images','txt').replace('.jpg','.txt').replace('.png','.txt')
         # print(txtFile)
         # 读取图像的宽和高
-        im = cv2.imread(os.path.join(root_path, 'images/train2024/') + index)
+        im = cv2.imread(str(root_path / 'images' / 'train2024' / index))
 
         height, width, _ = im.shape
         # print(height,width)
@@ -106,10 +111,10 @@ def yolo2coco(arg):
                                     'id': k,
                                     'width': width,
                                     'height': height})
-        if not os.path.exists(os.path.join(originLabelsDir, txtFile)):
+        if not os.path.exists(originLabelsDir / txtFile):
             # 如没标签，跳过，只保留图片信息。
             continue
-        with open(os.path.join(originLabelsDir, txtFile), 'r') as fr:
+        with open(originLabelsDir / txtFile, 'r') as fr:
             labelList = fr.readlines()
             for label in labelList:
                 # print(label)
@@ -145,7 +150,7 @@ def yolo2coco(arg):
                 ann_id_cnt += 1
 
     # 保存结果
-    folder = os.path.join(root_path, 'annotations')
+    folder = root_path / 'annotations'
     # if not os.path.exists(folder):
     #     os.makedirs(folder)
     # # if arg.random_split or arg.split_by_file:
@@ -160,7 +165,8 @@ def yolo2coco(arg):
     #         # print('Save annotation to {}'.format(json_name))
     # else:
     # json_name = os.path.join(root_path, 'annotations/{}'.format(arg.save_path))
-    json_name ='/mnt/data0/Garmin/datasets/ai-tod/annotations/aitod_test_v1_new.json'
+    json_name = Path(arg.save_path)
+    json_name.parent.mkdir(parents=True, exist_ok=True)
     with open(json_name, 'w') as f:
         json.dump(dataset, f)
         print('Save annotation to {}'.format(json_name))
