@@ -7,7 +7,10 @@ from collections import OrderedDict
 
 import numpy as np
 from mmcv.utils import print_log
-from aitodpycocotools.cocoeval import COCOeval
+try:
+    from aitodpycocotools.cocoeval import COCOeval  # type: ignore
+except ImportError:
+    from pycocotools.cocoeval import COCOeval  # fallback when aitod tools unavailable
 from terminaltables import AsciiTable
 
 from .builder import DATASETS
@@ -133,6 +136,10 @@ class AITODv2Dataset(CocoDataset):
                 'oLRP_false_negative': 18
 
             }
+            lrp_metric_items = [
+                'oLRP', 'oLRP_Localisation', 'oLRP_false_positive',
+                'oLRP_false_negative'
+            ]
             if metric_items is not None:
                 for metric_item in metric_items:
                     if metric_item not in coco_metric_names:
@@ -142,7 +149,14 @@ class AITODv2Dataset(CocoDataset):
             if metric == 'proposal':
                 cocoEval.params.useCats = 0
                 cocoEval.evaluate()
-                cocoEval.accumulate(with_lrp=with_lrp)
+                try:
+                    cocoEval.accumulate(with_lrp=with_lrp)
+                    effective_with_lrp = with_lrp
+                except TypeError:
+                    cocoEval.accumulate()
+                    effective_with_lrp = False
+                if with_lrp and 'olrp' not in cocoEval.eval:
+                    effective_with_lrp = False
                 cocoEval.summarize()
                 if metric_items is None:
                     metric_items = [
@@ -156,7 +170,14 @@ class AITODv2Dataset(CocoDataset):
                     eval_results[item] = val
             else:
                 cocoEval.evaluate()
-                cocoEval.accumulate(with_lrp=with_lrp)
+                try:
+                    cocoEval.accumulate(with_lrp=with_lrp)
+                    effective_with_lrp = with_lrp
+                except TypeError:
+                    cocoEval.accumulate()
+                    effective_with_lrp = False
+                if with_lrp and 'olrp' not in cocoEval.eval:
+                    effective_with_lrp = False
                 cocoEval.summarize()
                 if classwise:  # Compute per-category AP
                     # Compute per-category AP
@@ -192,7 +213,7 @@ class AITODv2Dataset(CocoDataset):
                     table = AsciiTable(table_data)
                     print_log('\n' + table.table, logger=logger)
 
-                if classwise_lrp:  # Compute per-category AP
+                if classwise_lrp and effective_with_lrp and 'olrp' in cocoEval.eval:  # Compute per-category AP
                     # Compute per-category AP
                     # from https://github.com/facebookresearch/detectron2/
                     oLRPs = cocoEval.eval['olrp']
@@ -228,8 +249,14 @@ class AITODv2Dataset(CocoDataset):
 
                 if metric_items is None:
                     metric_items = [
-                        'mAP', 'mAP_50', 'mAP_75', 'mAP_vt', 'mAP_t', 'mAP_s', 'mAP_m', 'oLRP', 'oLRP_Localisation',
-                        'oLRP_false_positive', 'oLRP_false_negative'
+                        'mAP', 'mAP_50', 'mAP_75', 'mAP_vt', 'mAP_t',
+                        'mAP_s', 'mAP_m'
+                    ]
+                    if effective_with_lrp:
+                        metric_items += lrp_metric_items
+                elif not effective_with_lrp:
+                    metric_items = [
+                        item for item in metric_items if item not in lrp_metric_items
                     ]
 
                 for metric_item in metric_items:

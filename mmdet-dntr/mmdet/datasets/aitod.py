@@ -1,16 +1,18 @@
-from .builder import DATASETS
-from .coco import CocoDataset
-
 import itertools
 import logging
+import inspect
 from collections import OrderedDict
 
 import numpy as np
 from mmcv.utils import print_log
-from aitodpycocotools.cocoeval import COCOeval
+try:
+    from aitodpycocotools.cocoeval import COCOeval  # type: ignore
+except ImportError:
+    from pycocotools.cocoeval import COCOeval  # fallback when aitod tools unavailable
 from terminaltables import AsciiTable
 
 from .builder import DATASETS
+from .coco import CocoDataset
 from .custom import CustomDataset
 
 
@@ -61,6 +63,87 @@ class AITODDataset(CocoDataset):
             dict[str, float]: COCO style evaluation metric.
         """
 
+        def _accumulate_with_optional_lrp(coco_eval, request_lrp):
+            """Run accumulate while gracefully handling missing LRP support."""
+            try:
+                params = inspect.signature(coco_eval.accumulate).parameters
+                supports_lrp = 'with_lrp' in params
+            except (ValueError, TypeError):
+                supports_lrp = False
+
+            if supports_lrp:
+                coco_eval.accumulate(with_lrp=request_lrp)
+                return bool(request_lrp)
+
+            if request_lrp:
+                print_log(
+                    ('COCOeval.accumulate() does not accept "with_lrp"; '
+                     'continuing without LRP metrics.'),
+                    logger=logger,
+                    level=logging.WARNING)
+            coco_eval.accumulate()
+            return False
+
+        custom_metric_map = {
+            'mAP': 0,
+            'mAP_25': 1,
+            'mAP_50': 2,
+            'mAP_75': 3,
+            'mAP_vt': 4,
+            'mAP_t': 5,
+            'mAP_s': 6,
+            'mAP_m': 7,
+            'mAP_l': None,
+            'AR@100': 8,
+            'AR@300': 9,
+            'AR@1000': None,
+            'AR@1500': 10,
+            'AR_vt@1500': 11,
+            'AR_t@1500': 12,
+            'AR_s@1000': None,
+            'AR_s@1500': 13,
+            'AR_m@1000': None,
+            'AR_m@1500': 14,
+            'AR_l@1000': None,
+            'AR_l@1500': None,
+            'oLRP': 15,
+            'oLRP_Localisation': 16,
+            'oLRP_false_positive': 17,
+            'oLRP_false_negative': 18
+        }
+        basic_metric_map = {
+            'mAP': 0,
+            'mAP_50': 1,
+            'mAP_75': 2,
+            'mAP_s': 3,
+            'mAP_m': 4,
+            'mAP_l': 5,
+            'mAP_25': None,
+            'mAP_vt': None,
+            'mAP_t': None,
+            'AR@1': 6,
+            'AR@10': 7,
+            'AR@100': 8,
+            'AR@300': None,
+            'AR@1000': None,
+            'AR@1500': None,
+            'AR_vt@1500': None,
+            'AR_t@1500': None,
+            'AR_s': 9,
+            'AR_s@1000': None,
+            'AR_s@1500': None,
+            'AR_m': 10,
+            'AR_m@1000': None,
+            'AR_m@1500': None,
+            'AR_l': 11,
+            'AR_l@1000': None,
+            'AR_l@1500': None,
+            'oLRP': None,
+            'oLRP_Localisation': None,
+            'oLRP_false_positive': None,
+            'oLRP_false_negative': None
+        }
+
         metrics = metric if isinstance(metric, list) else [metric]
         allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast']
         for metric in metrics:
@@ -82,6 +165,7 @@ class AITODDataset(CocoDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
+            cur_metric_items = None if metric_items is None else list(metric_items)
 
             if metric == 'proposal_fast':
                 ar = self.fast_eval_recall(
@@ -111,54 +195,43 @@ class AITODDataset(CocoDataset):
             cocoEval.params.imgIds = self.img_ids
             cocoEval.params.maxDets = list(proposal_nums)
             cocoEval.params.iouThrs = iou_thrs
-            # mapping of cocoEval.stats
-            coco_metric_names = {
-                'mAP': 0,
-                'mAP_25': 1,
-                'mAP_50': 2,
-                'mAP_75': 3,
-                'mAP_vt': 4,
-                'mAP_t': 5,
-                'mAP_s': 6,
-                'mAP_m': 7,
-                'AR@100': 8,
-                'AR@300': 9,
-                'AR@1500': 10,
-                'AR_vt@1500': 11,
-                'AR_t@1500': 12,
-                'AR_s@1500': 13,
-                'AR_m@1500': 14,
-                'oLRP': 15,
-                'oLRP_Localisation': 16,
-                'oLRP_false_positive': 17,
-                'oLRP_false_negative': 18
-
-            }
-            if metric_items is not None:
-                for metric_item in metric_items:
-                    if metric_item not in coco_metric_names:
-                        raise KeyError(
-                            f'metric item {metric_item} is not supported')
-
             if metric == 'proposal':
                 cocoEval.params.useCats = 0
                 cocoEval.evaluate()
-                cocoEval.accumulate(with_lrp=with_lrp)
+                _accumulate_with_optional_lrp(cocoEval, with_lrp)
                 cocoEval.summarize()
-                if metric_items is None:
-                    metric_items = [
+                custom_stats = len(cocoEval.stats) >= 19
+                metric_map = custom_metric_map if custom_stats else basic_metric_map
+                if cur_metric_items is None:
+                    cur_metric_items = [
                         'AR@100', 'AR@300', 'AR@1000', 'AR_s@1000',
                         'AR_m@1000', 'AR_l@1000'
                     ]
+                filtered_items = []
+                for item in cur_metric_items:
+                    if item not in metric_map:
+                        raise KeyError(
+                            f'metric item {item} is not supported')
+                    stat_idx = metric_map[item]
+                    if stat_idx is None or stat_idx >= len(cocoEval.stats):
+                        print_log(
+                            f'Skipping metric "{item}" because it is not '
+                            'available in the current COCOeval output.',
+                            logger=logger,
+                            level=logging.WARNING)
+                        continue
+                    filtered_items.append((item, stat_idx))
 
-                for item in metric_items:
-                    val = float(
-                        f'{cocoEval.stats[coco_metric_names[item]]:.3f}')
+                for item, stat_idx in filtered_items:
+                    val = float(f'{cocoEval.stats[stat_idx]:.3f}')
                     eval_results[item] = val
             else:
                 cocoEval.evaluate()
-                cocoEval.accumulate(with_lrp=with_lrp)
+                effective_with_lrp = _accumulate_with_optional_lrp(
+                    cocoEval, with_lrp)
                 cocoEval.summarize()
+                custom_stats = len(cocoEval.stats) >= 19
+                metric_map = custom_metric_map if custom_stats else basic_metric_map
                 if classwise:  # Compute per-category AP
                     # Compute per-category AP
                     # from https://github.com/facebookresearch/detectron2/
@@ -193,7 +266,7 @@ class AITODDataset(CocoDataset):
                     table = AsciiTable(table_data)
                     print_log('\n' + table.table, logger=logger)
                 
-                if classwise_lrp:  # Compute per-category AP
+                if classwise_lrp and effective_with_lrp and 'olrp' in cocoEval.eval:
                     # Compute per-category AP
                     # from https://github.com/facebookresearch/detectron2/
                     oLRPs = cocoEval.eval['olrp']
@@ -226,17 +299,55 @@ class AITODDataset(CocoDataset):
                     table_data += [result for result in results_2d]
                     table = AsciiTable(table_data)
                     print_log('\n' + table.table, logger=logger)
+                elif classwise_lrp and with_lrp:
+                    print_log(
+                        'Skipping classwise LRP breakdown because COCOeval '
+                        'did not report LRP metrics.',
+                        logger=logger,
+                        level=logging.WARNING)
 
-                if metric_items is None:
-                    metric_items = [
-                        'mAP', 'mAP_50', 'mAP_75', 'mAP_vt', 'mAP_t', 'mAP_s', 'mAP_m', 'oLRP', 'oLRP_Localisation', 'oLRP_false_positive', 'oLRP_false_negative'
-                    ]
+                if cur_metric_items is None:
+                    if custom_stats:
+                        cur_metric_items = [
+                            'mAP', 'mAP_50', 'mAP_75', 'mAP_vt', 'mAP_t',
+                            'mAP_s', 'mAP_m'
+                        ]
+                        if effective_with_lrp:
+                            cur_metric_items += [
+                                'oLRP', 'oLRP_Localisation',
+                                'oLRP_false_positive', 'oLRP_false_negative'
+                            ]
+                    else:
+                        cur_metric_items = [
+                            'mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m',
+                            'mAP_l'
+                        ]
 
-                for metric_item in metric_items:
+                filtered_metric_items = []
+                for metric_item in cur_metric_items:
+                    if metric_item not in metric_map:
+                        raise KeyError(
+                            f'metric item {metric_item} is not supported')
+                    if metric_item.startswith('oLRP') and not effective_with_lrp:
+                        print_log(
+                            f'Skipping metric "{metric_item}" because LRP is '
+                            'not available with the current COCOeval build.',
+                            logger=logger,
+                            level=logging.WARNING)
+                        continue
+                    stat_idx = metric_map[metric_item]
+                    if stat_idx is None or stat_idx >= len(cocoEval.stats):
+                        print_log(
+                            f'Skipping metric "{metric_item}" because '
+                            'COCOeval did not report a compatible statistic.',
+                            logger=logger,
+                            level=logging.WARNING)
+                        continue
+                    filtered_metric_items.append((metric_item, stat_idx))
+
+                for metric_item, stat_idx in filtered_metric_items:
                     key = f'{metric}_{metric_item}'
-                    val = float(
-                        f'{cocoEval.stats[coco_metric_names[metric_item]]:.3f}'
-                    )
+                    val = float(f'{cocoEval.stats[stat_idx]:.3f}')
                     eval_results[key] = val
                 ap = cocoEval.stats[:6]
                 eval_results[f'{metric}_mAP_copypaste'] = (

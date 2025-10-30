@@ -6,6 +6,7 @@ import time
 import warnings
 
 import mmcv
+import numpy as np
 import torch
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
@@ -18,6 +19,89 @@ from mmdet.datasets import (build_dataloader, build_dataset,
 from mmdet.models import build_detector
 from mmdet.utils import (build_ddp, build_dp, compat_cfg, get_device,
                          setup_multi_processes, update_data_root)
+
+
+def truncate_dataset(dataset, max_samples):
+    """Trim dataset in-place to use at most ``max_samples`` entries."""
+    try:
+        dataset_len = len(dataset)
+    except TypeError as exc:
+        raise RuntimeError('Cannot determine dataset length for truncation') from exc
+
+    if dataset_len <= max_samples:
+        return
+
+    truncated = False
+
+    if hasattr(dataset, 'datasets'):
+        new_datasets = []
+        remaining = max_samples
+        for child in dataset.datasets:
+            if remaining <= 0:
+                break
+            truncate_dataset(child, remaining)
+            child_len = min(len(child), remaining)
+            if child_len == 0:
+                break
+            new_datasets.append(child)
+            remaining -= child_len
+        if not new_datasets:
+            raise RuntimeError('Unable to truncate concatenated dataset')
+        dataset.datasets = new_datasets
+        dataset.cumulative_sizes = dataset.cumsum(new_datasets)
+        if hasattr(dataset, 'flag'):
+            flags = [child.flag for child in new_datasets if hasattr(child, 'flag')]
+            if flags:
+                dataset.flag = np.concatenate(flags)
+            else:
+                dataset.flag = dataset.flag[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'dataset') and not truncated:
+        truncate_dataset(dataset.dataset, max_samples)
+        truncated = True
+        if hasattr(dataset, 'times'):
+            dataset.times = 1
+            if hasattr(dataset, '_ori_len'):
+                dataset._ori_len = min(dataset._ori_len,
+                                       len(dataset.dataset))
+        if hasattr(dataset, 'num_samples'):
+            dataset.num_samples = min(dataset.num_samples, max_samples)
+        if hasattr(dataset.dataset, 'flag') and hasattr(dataset, 'flag'):
+            dataset.flag = dataset.dataset.flag[:max_samples]
+        if hasattr(dataset, 'repeat_indices'):
+            dataset.repeat_indices = dataset.repeat_indices[:max_samples]
+
+    if hasattr(dataset, 'data_infos'):
+        dataset.data_infos = dataset.data_infos[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'data_info'):
+        dataset.data_info = dataset.data_info[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'img_ids'):
+        dataset.img_ids = dataset.img_ids[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'indices'):
+        dataset.indices = dataset.indices[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'flag'):
+        dataset.flag = dataset.flag[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'repeat_indices'):
+        dataset.repeat_indices = dataset.repeat_indices[:max_samples]
+        truncated = True
+
+    if hasattr(dataset, 'num_samples'):
+        dataset.num_samples = min(dataset.num_samples, max_samples)
+        truncated = True
+
+    if not truncated:
+        raise RuntimeError('Unsupported dataset type for truncation')
 
 
 def parse_args():
@@ -103,6 +187,10 @@ def parse_args():
         default='none',
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument(
+        '--max-samples',
+        type=int,
+        help='Limit the number of samples from the test set (positive int).')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -210,6 +298,10 @@ def main():
         json_file = osp.join(args.work_dir, f'eval_{timestamp}.json')
     # build the dataloader
     dataset = build_dataset(cfg.data.test)
+    if args.max_samples is not None:
+        if args.max_samples <= 0:
+            raise ValueError('--max-samples must be a positive integer')
+        truncate_dataset(dataset, args.max_samples)
     data_loader = build_dataloader(dataset, **test_loader_cfg)
 
     # build the model and load checkpoint
