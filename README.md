@@ -92,6 +92,18 @@ python tools/analysis_tools/analyze_psnr_aitod.py
 - 결과 로그와 체크포인트는 `mmdet-dntr/work_dirs/` 아래에 생성됩니다.
 - 실험 기록은 `work_dirs/logs/`에서 확인할 수 있으며, README에 명시된 구조를 유지하면 바로 재현 가능합니다.
 
+### 스모크 테스트 스크립트
+
+소규모 서브셋(10·50장 등)으로 빠르게 확인하려면 `run_smoke_tests.sh` 를 사용할 수 있습니다.
+
+```bash
+cd mmdet-dntr
+./run_smoke_tests.sh        # 기본 10장 평가
+./run_smoke_tests.sh 50     # 50장 평가 등 원하는 샘플 수 지정
+```
+
+`testvenv` 가 설치되어 있어야 하며, 결과는 `work_dirs/test_subset_max{N}_ckptcfg` 폴더에 저장됩니다.
+
 ## 사전 학습 가중치
 - AI-TOD v1/v2: [Google Drive](https://drive.google.com/drive/folders/1i0mYPQ3Cz_k4iAIvSwecwpWMX_wivxzY)
 - 가중치를 `mmdet-dntr/work_dirs/<exp_name>/`에 배치하고 구성 파일의 `load_from` 값을 조정하세요.
